@@ -143,10 +143,10 @@ public class TestDateTimeFormat extends TestCase {
     public void testFormat_yearOfEra_twoDigit() {
         DateTime dt = new DateTime(2004, 6, 9, 10, 20, 30, 40, UTC);
         DateTimeFormatter f = DateTimeFormat.forPattern("YY").withLocale(Locale.UK);
-        assertEquals(dt.toString(), "04", f.print(dt));
+        assertEquals(dt.toString(), "2004", f.print(dt));
         
         dt = new DateTime(-123, 6, 9, 10, 20, 30, 40, UTC);
-        assertEquals(dt.toString(), "23", f.print(dt));
+        assertEquals(dt.toString(), "0123", f.print(dt));
         
         // current time set to 2002-06-09
         f = f.withZoneUTC();
@@ -235,10 +235,10 @@ public class TestDateTimeFormat extends TestCase {
     public void testFormat_year_twoDigit() {
         DateTime dt = new DateTime(2004, 6, 9, 10, 20, 30, 40, UTC);
         DateTimeFormatter f = DateTimeFormat.forPattern("yy").withLocale(Locale.UK);
-        assertEquals(dt.toString(), "04", f.print(dt));
+        assertEquals(dt.toString(), "2004", f.print(dt));
         
         dt = new DateTime(-123, 6, 9, 10, 20, 30, 40, UTC);
-        assertEquals(dt.toString(), "23", f.print(dt));
+        assertEquals(dt.toString(), "0123", f.print(dt));
         
         // current time set to 2002-06-09
         f = f.withZoneUTC();
@@ -380,10 +380,10 @@ public class TestDateTimeFormat extends TestCase {
     public void testFormat_weekyearOfEra_twoDigit() {
         DateTime dt = new DateTime(2004, 6, 9, 10, 20, 30, 40, UTC);
         DateTimeFormatter f = DateTimeFormat.forPattern("xx").withLocale(Locale.UK);
-        assertEquals(dt.toString(), "04", f.print(dt));
+        assertEquals(dt.toString(), "2004", f.print(dt));
         
         dt = new DateTime(-123, 6, 9, 10, 20, 30, 40, UTC);
-        assertEquals(dt.toString(), "23", f.print(dt));
+        assertEquals(dt.toString(), "0123", f.print(dt));
         
         // current time set to 2002-06-09
         f = f.withZoneUTC();
