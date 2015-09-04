@@ -1603,15 +1603,33 @@ public class DateTimeFormatterBuilder {
         public void printTo(
                 Appendable appendable, long instant, Chronology chrono,
                 int displayOffset, DateTimeZone displayZone, Locale locale) throws IOException {
-            int year = getTwoDigitYear(instant, chrono);
+            int year = getFourDigitYear(instant, chrono); //FPX 
             if (year < 0) {
                 appendable.append('\ufffd');
                 appendable.append('\ufffd');
+                //vvv FPX vvv
+                appendable.append('\ufffd');
+                appendable.append('\ufffd');
+                //^^^ FPX ^^^
             } else {
-                FormatUtils.appendPaddedInteger(appendable, year, 2);
+                FormatUtils.appendPaddedInteger(appendable, year, 4 /*FPX*/);
             }
         }
 
+        //vvv FPX vvv
+        private int getFourDigitYear(long instant, Chronology chrono) {
+            try {
+                int year = iType.getField(chrono).get(instant);
+                if (year < 0) {
+                    year = -year;
+                }
+                return year;
+            } catch (RuntimeException e) {
+                return -1;
+            }
+        }
+        //^^^ FPX ^^^
+        
         private int getTwoDigitYear(long instant, Chronology chrono) {
             try {
                 int year = iType.getField(chrono).get(instant);
@@ -1625,14 +1643,33 @@ public class DateTimeFormatterBuilder {
         }
 
         public void printTo(Appendable appendable, ReadablePartial partial, Locale locale) throws IOException {
-            int year = getTwoDigitYear(partial);
+            int year = getFourDigitYear(partial); //FPX
             if (year < 0) {
                 appendable.append('\ufffd');
                 appendable.append('\ufffd');
+                //vvv FPX vvv
+                appendable.append('\ufffd');
+                appendable.append('\ufffd');
+                //^^^ FPX ^^^
             } else {
-                FormatUtils.appendPaddedInteger(appendable, year, 2);
+                FormatUtils.appendPaddedInteger(appendable, year,  4 /*FPX*/);
             }
         }
+        
+        //vvv FPX vvv
+        private int getFourDigitYear(ReadablePartial partial) {
+            if (partial.isSupported(iType)) {
+                try {
+                    int year = partial.get(iType);
+                    if (year < 0) {
+                        year = -year;
+                    }
+                    return year;
+                } catch (RuntimeException e) {}
+            } 
+            return -1;
+        }
+        //^^^ FPX ^^^        
 
         private int getTwoDigitYear(ReadablePartial partial) {
             if (partial.isSupported(iType)) {
