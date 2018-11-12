@@ -1,5 +1,5 @@
 /*
- *  Copyright 2001-2005 Stephen Colebourne
+ *  Copyright 2001-2015 Stephen Colebourne
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -251,7 +251,7 @@ public abstract class DateTimeField {
      * <p>
      * Partial instants only contain some fields. This may result in a maximum
      * possible value, such as TimeOfDay normally being limited to 23:59:59:999.
-     * If ths limit is reached by the addition, this method will wrap back to
+     * If this limit is reached by the addition, this method will wrap back to
      * 00:00:00.000. In fact, you would generally only use this method for
      * classes that have a limitation such as this.
      * <p>
@@ -377,6 +377,20 @@ public abstract class DateTimeField {
      * @throws IllegalArgumentException if the value is invalid
      */
     public abstract long set(long instant, int value);
+
+    /**
+     * Sets a value in the milliseconds supplied, allowing a little leniency at the margins.
+     * <p>
+     * This is primarily an internal method used by parsing.
+     * 
+     * @param instant  the milliseconds from 1970-01-01T00:00:00Z to set in
+     * @param value  the value to set, in the units of the field
+     * @return the updated milliseconds
+     * @throws IllegalArgumentException if the value is invalid
+     */
+    public long setExtended(long instant, int value) {
+        return set(instant, value);
+    }
 
     /**
      * Sets a value using the specified partial instant.

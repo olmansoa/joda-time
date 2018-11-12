@@ -57,7 +57,7 @@ import org.joda.time.DateTimeZone;
  * <p>
  * IslamicChronology is thread-safe and immutable.
  *
- * @see <a href="http://en.wikipedia.org/wiki/Islamic_calendar">Wikipedia</a>
+ * @see <a href="https://en.wikipedia.org/wiki/Islamic_calendar">Wikipedia</a>
  *
  * @author Stephen Colebourne
  * @since 1.2
@@ -331,12 +331,10 @@ public final class IslamicChronology extends BasicChronology {
         int dayOfYear = getDayOfYear(instant, thisYear);
         int millisOfDay = getMillisOfDay(instant);
 
-        if (dayOfYear > 354) {
-            // Current year is leap, and day is leap.
-            if (!isLeapYear(year)) {
+        // Current year is leap, and day is leap.
+        if (dayOfYear > 354 && !isLeapYear(year)) {
                 // Moving to a non-leap year, leap day doesn't exist.
                 dayOfYear--;
-            }
         }
 
         instant = getYearMonthDayMillis(year, 1, dayOfYear);

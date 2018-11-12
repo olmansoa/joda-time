@@ -18,6 +18,7 @@ package org.joda.time.format;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1304,25 +1305,21 @@ public class DateTimeFormatterBuilder {
             int limit = Math.min(iMaxParsedDigits, text.length() - position);
 
             boolean negative = false;
+            boolean positive = false;
             int length = 0;
             while (length < limit) {
                 char c = text.charAt(position + length);
                 if (length == 0 && (c == '-' || c == '+') && iSigned) {
                     negative = c == '-';
+                    positive = c == '+';
 
                     // Next character must be a digit.
                     if (length + 1 >= limit || 
-                        (c = text.charAt(position + length + 1)) < '0' || c > '9')
-                    {
+                        (c = text.charAt(position + length + 1)) < '0' || c > '9') {
                         break;
                     }
+                    length++;
 
-                    if (negative) {
-                        length++;
-                    } else {
-                        // Skip the '+' for parseInt to succeed.
-                        position++;
-                    }
                     // Expand the limit to disregard the sign character.
                     limit = Math.min(limit + 1, text.length() - position);
                     continue;
@@ -1341,10 +1338,15 @@ public class DateTimeFormatterBuilder {
             if (length >= 9) {
                 // Since value may exceed integer limits, use stock parser
                 // which checks for this.
-                value = Integer.parseInt(text.subSequence(position, position += length).toString());
+                if (positive) {
+                    value = Integer.parseInt(text.subSequence(position + 1, position += length).toString());
+                } else {
+                    value = Integer.parseInt(text.subSequence(position, position += length).toString());
+                }
+//                value = Integer.parseInt(text.subSequence(position, position += length).toString());
             } else {
                 int i = position;
-                if (negative) {
+                if (negative || positive) {
                     i++;
                 }
                 try {
@@ -2351,17 +2353,38 @@ public class DateTimeFormatterBuilder {
 
         INSTANCE;
         private static final List<String> ALL_IDS;
+        // groups are "Europe/A", "Europe/B", "Europe/C", etc
+        // group of "" is for zones that do not have a "/" in the name
+        private static final Map<String, List<String>> GROUPED_IDS;
+        private static final List<String> BASE_GROUPED_IDS = new ArrayList<String>();
+        static final int MAX_LENGTH;
+        static final int MAX_PREFIX_LENGTH;
         static {
             ALL_IDS = new ArrayList<String>(DateTimeZone.getAvailableIDs());
             Collections.sort(ALL_IDS);
-        }
-        static final int MAX_LENGTH;
-        static {
+            GROUPED_IDS = new HashMap<String, List<String>>();
             int max = 0;
+            int maxPrefix = 0;
             for (String id : ALL_IDS) {
+                int pos = id.indexOf('/');
+                if (pos >= 0) {
+                    if (pos < id.length()) {
+                        pos++;
+                    }
+                    maxPrefix = Math.max(maxPrefix, pos);
+                    String prefix = id.substring(0, pos + 1);
+                    String suffix = id.substring(pos);
+                    if (!GROUPED_IDS.containsKey(prefix)) {
+                        GROUPED_IDS.put(prefix, new ArrayList<String>());
+                    }
+                    GROUPED_IDS.get(prefix).add(suffix);
+                } else {
+                    BASE_GROUPED_IDS.add(id);
+                }
                 max = Math.max(max, id.length());
             }
             MAX_LENGTH = max;
+            MAX_PREFIX_LENGTH = maxPrefix;
         }
 
         public int estimatePrintedLength() {
@@ -2383,43 +2406,47 @@ public class DateTimeFormatterBuilder {
         }
 
         public int parseInto(DateTimeParserBucket bucket, CharSequence text, int position) {
-            String best = null;
-            int pos = prefixedStartPosition(text, position);
-            for (int i = pos; i < ALL_IDS.size(); i++) {
-                String id = ALL_IDS.get(i);
-                if (csStartsWith(text, position, id)) {
-                    if (best == null || id.length() > best.length()) {
-                        best = id;
+            // select the base set of identifiers that do not have a slash
+            List<String> suffixSet = BASE_GROUPED_IDS;
+            // hunt for a slash only as far as the max prefix length
+            int textLen = text.length();
+            int matchLen = Math.min(textLen, position + MAX_PREFIX_LENGTH);
+            int pos = position;
+            String prefix = "";
+            for (int i = pos; i < matchLen; i++) {
+                if (text.charAt(i) == '/') {
+                    // when a slash is found, determine the prefix, such as "Europe/A" and lookup to get suffixes
+                    prefix = text.subSequence(pos, i + 1).toString();
+                    pos += prefix.length();
+                    String prefixLookup = prefix;
+                    if (i < textLen) {
+                        prefixLookup += text.charAt(i + 1);
                     }
-                } else {
+                    suffixSet = GROUPED_IDS.get(prefixLookup);
+                    if (suffixSet == null) {
+                        return ~position;
+                    }
                     break;
                 }
             }
+            // search all suffixes, hopefully a relatively small number due to prefix search
+            String best = null;
+            for (int i = 0; i < suffixSet.size(); i++) {
+                String suffix = suffixSet.get(i);
+                if (csStartsWith(text, pos, suffix)) {
+                    if (best == null || suffix.length() > best.length()) {
+                        best = suffix;
+                    }
+                }
+            }
+            // if found then store, else fail
             if (best != null) {
-                bucket.setZone(DateTimeZone.forID(best));
-                return position + best.length();
+                bucket.setZone(DateTimeZone.forID(prefix + best));
+                return pos + best.length();
             }
             return ~position;
         }
 
-        private static int prefixedStartPosition(CharSequence text, int position) {
-            int lo = 0;
-            int hi = ALL_IDS.size() - 1;
-
-            while (lo <= hi) {
-                int mid = (lo + hi) >>> 1;
-                String value = ALL_IDS.get(mid);
-                int compare = csCompare(text, position, value);
-                if (compare > 0) {
-                    hi = mid - 1;
-                } else if (compare < 0) {
-                    lo = mid + 1;
-                } else {
-                    return mid;
-                }
-            }
-            return lo;
-        }
     }
 
     //-----------------------------------------------------------------------
@@ -2651,17 +2678,6 @@ public class DateTimeFormatterBuilder {
 
             return ~bestInvalidPos;
         }
-    }
-
-    static int csCompare(CharSequence text, int position, String search) {
-        int compareLen = Math.min(text.length() - position, search.length());
-        for (int i = 0; i < compareLen; i++) {
-            int result = search.charAt(i) - text.charAt(position + i);
-            if (result != 0) {
-                return result;
-            }
-        }
-        return 0;
     }
 
     static boolean csStartsWith(CharSequence text, int position, String search) {
